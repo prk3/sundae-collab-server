@@ -1,0 +1,15 @@
+# git files
+.git
+.gitignore
+.gitattributes
+
+# tests
+/test
+
+# local configuration
+.env
+
+# npm stuff
+node_modules
+npm-debug.log
+
