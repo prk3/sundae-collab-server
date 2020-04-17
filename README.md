@@ -14,7 +14,36 @@ For the client integration, you can use [sundae-collab-react](https://github.com
 Yes. Use this docker-compose file to run sundae-collab-server, sundae-collab-demo-client, sundae-collab-demo-api and postgress. Open [localhost:8200](http://localhost:8200) and test collaboration on cooking recipes!
 
 ```yml
-TODO
+version: '3'
+services:
+
+  postgres:
+    image: postgres:12.1
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  server:
+    build: https://github.com/prk3/sundae-collab-server.git
+    ports:
+      - "8100:8100"
+    environment:
+      NODE_ENV: "development" # to allow cross origin requests
+      LOG: warning
+
+  demo-api:
+    build: https://github.com/prk3/sundae-collab-demo-api.git
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      NODE_ENV: "development" # to allow cross origin requests
+
+  demo-client:
+    build: https://github.com/prk3/sundae-collab-demo-client.git
+    ports:
+      - "8200:8200"
 ```
 
 ## Environment
