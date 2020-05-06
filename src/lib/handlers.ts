@@ -314,7 +314,7 @@ const handlers: Handlers = {
         });
     });
 
-    log.debug(`client ${client.id} updated session ${session.id} with`, update);
+    log.debug(`client ${client.id} updated session producing new state`, session.state);
     return {
       version: newState.version,
     };

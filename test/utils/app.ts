@@ -1,5 +1,15 @@
+import { Server } from 'http';
 import makeApp from '../../src/app';
-import './app.d';
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      httpServer: Server;
+    }
+  }
+
+  let httpSever: Server;
+}
 
 // start a new server instance before each test suite
 // make it available under global.httpServer

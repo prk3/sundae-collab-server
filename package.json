@@ -1,7 +1,7 @@
 {
   "name": "sundae-collab-server",
   "description": "The heart of sundae collaboration framework.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "GPL-3.0-only",
   "author": {
     "name": "prk3",
@@ -23,7 +23,7 @@
     "@types/nanoid": "^2.1.0",
     "@types/node": "^13.7.4",
     "@types/ws": "^7.2.1",
-    "@types/yup": "^0.26.32",
+    "@types/yup": "^0.26.37",
     "jot": "git+https://github.com/prk3/jot.git",
     "nanoid": "^2.1.11",
     "sundae-collab-shared": "git+https://github.com/prk3/sundae-collab-shared.git",
@@ -45,7 +45,7 @@
     "eslint-plugin-react": "^7.19.0",
     "eslint-plugin-react-hooks": "^2.5.0",
     "jest": "^25.1.0",
-    "ts-jest": "^25.2.1",
+    "ts-jest": "^25.5.0",
     "ts-node-dev": "^1.0.0-pre.44"
   }
 }

@@ -1,11 +1,34 @@
-import './app';
-import './client.d';
 import WebSocket from 'ws';
 import nanoid from 'nanoid/non-secure';
 import {
   ClientMessageType, ClientMessageData, ClientResponse, ServerMessageType, ServerMessage,
   ServerResponse, responsePacketValidator, requestPacketValidator, messageValidator,
+  ResponsePacket, errorDataValidator, RequestPacket, Message,
 } from 'sundae-collab-shared';
+import './app';
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      sockets: WebSocket[];
+      makeClient: () => Promise<WebSocket>;
+
+      send: <T extends ServerMessageType>(
+        socket: WebSocket,
+        message: ServerMessage<T>,
+      ) => Promise<ServerResponse<T>>;
+
+      waitFor: <T extends ClientMessageType>(
+        socket: WebSocket,
+        type: T,
+      ) => Promise<[ClientMessageData<T>, (data: ClientResponse<T>) => Promise<void>]>;
+    }
+  }
+  let makeClient: NodeJS.Global['makeClient'];
+  let send: NodeJS.Global['send'];
+  let waitFor: NodeJS.Global['waitFor'];
+}
+
 
 type WebSocketMessage = {
   data: any;
@@ -16,7 +39,7 @@ type WebSocketMessage = {
 /**
  * Creates a web socket connection to the server initialized in app.ts.
  */
-export async function makeClient(): Promise<WebSocket> {
+async function makeClientLocal(): Promise<WebSocket> {
   return new Promise((res, rej) => {
     // credits to supertest for the trick with port 0 and http.Server.address().port
     // https://github.com/visionmedia/supertest/blob/master/lib/test.js
@@ -38,7 +61,7 @@ export async function makeClient(): Promise<WebSocket> {
  * Sends a message and returns a promise resolving to a server response.
  * Error is considered a valid response.
  */
-export async function send<T extends ServerMessageType>(
+async function sendLocal<T extends ServerMessageType>(
   socket: WebSocket,
   message: ServerMessage<T>,
 ): Promise<ServerResponse<T>> {
@@ -49,36 +72,37 @@ export async function send<T extends ServerMessageType>(
   // set up a time limit of 4 seconds
   const timeoutPromise = new Promise<ServerResponse<T>>((res, rej) => {
     timeoutId = setTimeout(() => {
-      clearTimeout(timeoutId);
       socket.removeEventListener('message', messageListener);
       rej(new Error('WS timeout. Either server did not respond or response could not be read.'));
     }, 4000);
   });
 
   // set up response listener
-  const responsePromise = new Promise<ServerResponse<T>>((res) => {
+  const responsePromise = new Promise<ServerResponse<T>>((res, rej) => {
     messageListener = ({ data }: WebSocketMessage) => {
-      if (typeof data !== 'string') {
-        // ignore non-string packets
-        return;
-      }
-      let parsed: any;
+      let packet: ResponsePacket;
       try {
-        parsed = JSON.parse(data);
+        packet = responsePacketValidator.validateSync(JSON.parse(data), { strict: true });
       } catch (e) {
-        // ignore non-json packets
-        return;
-      }
-      if (!responsePacketValidator.validateSync(parsed)) {
-        // ignore non-response packets
+        // ignore non-string, non-json or invalid packets
         return;
       }
       // response's id must match sent id
-      if (parsed?.responseTo === uid) {
+      if (packet.responseTo === uid) {
         clearTimeout(timeoutId);
         socket.removeEventListener('message', messageListener);
-        // resolve the promise even if the server returned an error
-        res(parsed.data);
+
+        try {
+          // reject if response data matches error response format
+          const errData = errorDataValidator.validateSync(packet.data, { strict: true });
+          const err = new Error(errData.error.message);
+          err.name = errData.error.name;
+          rej(err);
+        } catch (e) {
+          // not an error
+          // the cast is necessary, but we could validate the response to be sure
+          res(packet.data as ServerResponse<T>);
+        }
       }
     };
     socket.addEventListener('message', messageListener);
@@ -98,7 +122,7 @@ type DataAndRespond<T extends ClientMessageType>
  * The resolved value contains the response content and a response function
  * which sends response to the server.
  */
-async function waitFor<T extends ClientMessageType>(
+async function waitForLocal<T extends ClientMessageType>(
   socket: WebSocket,
   type: T,
 ): Promise<DataAndRespond<T>> {
@@ -108,7 +132,7 @@ async function waitFor<T extends ClientMessageType>(
   // set up time limit of 4 seconds
   const timeoutPromise = new Promise<DataAndRespond<T>>((res, rej) => {
     timeoutId = setTimeout(() => {
-      clearTimeout(timeoutId);
+      socket.removeEventListener('message', messageListener);
       rej(new Error('WS timeout. Either server did not send a request or request could not be read.'));
     }, 4000);
   });
@@ -116,39 +140,31 @@ async function waitFor<T extends ClientMessageType>(
   // listen for requests
   const requestPromise = new Promise<DataAndRespond<T>>((res) => {
     messageListener = ({ data }: WebSocketMessage) => {
-      if (typeof data !== 'string') {
-        // ignore non-string packets
-        return;
-      }
-      let parsed: any;
+      let packet: RequestPacket;
+      let message: Message;
       try {
-        parsed = JSON.parse(data);
+        packet = requestPacketValidator.validateSync(JSON.parse(data), { strict: true });
+        message = messageValidator.validateSync(packet.message, { strict: true });
       } catch (e) {
-        // ignore non-json packets
-        return;
-      }
-      if (!requestPacketValidator.validateSync(parsed)
-        || !messageValidator.validateSync(parsed.message)) {
-        // ignore non-request packets and requests with invalid message format
+        // ignore non-string, non-json and invalid request packets
         return;
       }
       // type must match
-      if (parsed.message.type === type) {
+      if (message.type === type) {
         clearTimeout(timeoutId);
         socket.removeEventListener('message', messageListener);
 
         // extract data from the request and prepare respond function
-        const messageData = parsed.message.data;
         const respond = (responseData: ClientResponse<T>) => new Promise<void>(
           (respondRes, respondRej) => {
             socket.send(
-              JSON.stringify({ responseTo: parsed.uid, data: responseData }),
+              JSON.stringify({ responseTo: packet.uid, data: responseData }),
               (err) => (err ? respondRej(err) : respondRes()),
             );
           },
         );
 
-        res([messageData, respond]);
+        res([message.data as ClientMessageData<T>, respond]);
       }
     };
     socket.addEventListener('message', messageListener);
@@ -159,9 +175,9 @@ async function waitFor<T extends ClientMessageType>(
 
 // make client functions public at the start of a test suite
 beforeAll(() => {
-  global.makeClient = makeClient;
-  global.send = send;
-  global.waitFor = waitFor;
+  global.makeClient = makeClientLocal;
+  global.send = sendLocal;
+  global.waitFor = waitForLocal;
 });
 
 // initialize the socket list before each socket
@@ -176,3 +192,6 @@ afterEach(() => {
     socket.close();
   });
 });
+
+/* eslint-disable-next-line import/prefer-default-export */
+export { sendLocal as send };

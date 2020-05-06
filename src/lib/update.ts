@@ -8,9 +8,8 @@ import { BadUpdate } from './errors';
  * Applies jot operation on a given state, returning an updated state.
  */
 export function applyOperation(op: jot.Operation, state: DocumentState): DocumentState {
-  const meta = { in: state.meta, out: undefined as undefined | jot.Meta };
-  const newValue = op.apply(state.value, meta);
-  return { version: state.version + 1, value: newValue, meta: meta.out ?? state.meta };
+  const [newValue, newMeta] = op.applyWithMeta(state.value, state.meta);
+  return { version: state.version + 1, value: newValue, meta: newMeta };
 }
 
 /**
@@ -78,23 +77,24 @@ export function rebaseUpdate(
     return { version: history[history.length - 1].version + 1, operation };
   }
 
-  let currentState = stateAtVersion(base, history, shortcuts);
+  const bricksToRebaseAgainst = history.slice(findVersionIndex(base + 1, history));
+  log.debug('REBASE against', bricksToRebaseAgainst);
+
+  let baseState = stateAtVersion(base, history, shortcuts);
   let op = operation;
 
-  for (let i = findVersionIndex(base + 1, history); i < history.length; i += 1) {
-    const brickOperation = history[i].operation;
-    const tmpOp = op.rebase(brickOperation);
+  bricksToRebaseAgainst.forEach((brick) => {
+    const tmpOp = op.rebase(brick.operation);
     if (tmpOp === null) {
-      log.warn('REBASE_CONFLICT a.rebase(b)', { a: op.toJSON(), b: brickOperation.toJSON() });
-      op = op.rebase(brickOperation, { document: currentState.value });
+      log.debug('REBASE_CONFLICT a.rebase(b)', { a: op.toJSON(), b: brick.operation.toJSON() });
+      op = op.rebase(brick.operation, { document: baseState.value });
     } else {
       op = tmpOp;
     }
+    baseState = applyOperation(brick.operation, baseState);
+  });
 
-    currentState = applyOperation(op, currentState);
-  }
-
-  return { version: currentState.version + 1, operation: op };
+  return { version: baseState.version + 1, operation: op };
 }
 
 /**
