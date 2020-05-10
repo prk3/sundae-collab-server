@@ -58,13 +58,17 @@ Before you run sundae-collab-server locally, copy `example.env` file to `.env`. 
 
 In the project directory, you can run:
 
-### `npm run server`
-
-Runs the server.
-
 ### `npm run dev`
 
-Runs the server in the development mode. It will reload whenever source files change.
+Runs the server in development mode. Reload the app whenever source files change.
+
+### `npm run build`
+
+Compiles source files to `build` folder.
+
+### `npm run start`
+
+Starts compiled application.
 
 ### `npm run test`
 
@@ -85,6 +89,7 @@ This software is a part of my dissertation project. While the demo looks promisi
 1. Save revisions in a persistent key-value store and add version control to the protocol.
 1. Allow to leave sessions without knowing session id.
 1. Add resource type schema support and validate new content revisions against those schemas.
+1. Fix session middleware.
 
 ## Learn More
 

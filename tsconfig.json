@@ -10,8 +10,8 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "noEmit": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "outDir": "build"
   },
   "include": [
     "src"

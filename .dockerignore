@@ -6,6 +6,9 @@
 # tests
 /test
 
+# build
+/build
+
 # local configuration
 .env
 

@@ -1,7 +1,7 @@
 {
   "name": "sundae-collab-server",
   "description": "The heart of sundae collaboration framework.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "GPL-3.0-only",
   "author": {
     "name": "prk3",
@@ -12,10 +12,11 @@
     "type": "git",
     "url": "https://github.com/prk3/sundae-collab-server.git"
   },
-  "main": "src/server.ts",
+  "main": "build/server.js",
   "scripts": {
-    "server": "ts-node ./src/server.ts",
-    "dev": "ts-node-dev ./src/server.ts",
+    "dev": "ts-node-dev src/server.ts",
+    "build": "rm -rf build && tsc",
+    "start": "node build/server.js",
     "test": "jest",
     "lint": "eslint --ext .js,.ts ."
   },
