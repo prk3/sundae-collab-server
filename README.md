@@ -5,7 +5,7 @@ sundae-collab is a set of tools that enable app developers to add collaboration 
 
 ## How do I use sundae-collab?
 
-This repository can be built into a docker image. Simply use `https://github.com/prk3/sundae-collab-server.git` as a build path. Alternatively, you can clone this node project, install dependencies with `npm install` and run it with `npm run server`. The servers runs on port `8100` but you can override this with PORT env variable.
+This repository can be built into a docker image. Simply use `https://github.com/prk3/sundae-collab-server.git` as a build path. Alternatively, you can clone this node project, install dependencies with `npm install`, build the app with `npm run build` and run it with `npm run start`. The server listens on port `8100` by default, but you can override this with PORT env variable.
 
 For the client integration, you can use [sundae-collab-react](https://github.com/prk3/sundae-collab-react) with React apps or [sundae-collab-client](https://github.com/prk3/sundae-collab-client) with vanilla javascript.
 
@@ -80,7 +80,7 @@ Lints all source files and tests.
 
 ## About
 
-This software is a part of my dissertation project. While the demo looks promising, the project needs a lot more work before it becomes production ready. Feel free to experiment and contribute.
+This software is a part of my dissertation project. While the demo looks promising, the project needs more work before it becomes production ready. Feel free to experiment and contribute.
 
 ## TODO
 
